@@ -4,3 +4,5 @@ set(TARGET unit_tests)
 project(${TARGET})
 
 include(cmake/functions.cmake)
+
+add_subdirectory(example)
