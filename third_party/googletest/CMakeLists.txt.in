@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+
+project(googletest-download NONE)
+
+include(ExternalProject)
+
+# Version 2fe3bd994b3189899d93f1d5a881e725e046fdc2 happens to be master when I set this up.
+ExternalProject_Add(googletest
+  URL               https://github.com/google/googletest/archive/2fe3bd994b3189899d93f1d5a881e725e046fdc2.tar.gz
+  SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/googletest-src"
+  BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/googletest-build"
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND     ""
+  INSTALL_COMMAND   ""
+  TEST_COMMAND      ""
+)
