@@ -20,25 +20,14 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <cmath>
-
 #include <gtest/gtest.h>
 
-#include "linear_system.hpp"
+#include "block_linear_system.hpp"
 
-class LinearSystemTests : public ::testing::Test {};
+class BlockLinearSystemTests : public ::testing::Test {};
 
-TEST_F(LinearSystemTests, test_default) {
-  ex_m_thr::LinearSystem ls;
-  std::vector<float> exact_solution({1.0, 2.0, 3.0}); 
+TEST_F(BlockLinearSystemTests, simple) {
+  ex_m_thr::BlockLinearSystem bls;
 
-  ls.solve();
-
-  float dd {0.0};
-  for (std::size_t i = 0; i < exact_solution.size(); ++i) {
-    float d = ls.solution()[i] - exact_solution[i];
-    dd += d * d;
-  }
-
-  EXPECT_TRUE(std::sqrt(dd) < 1.0e-6);
+  EXPECT_EQ(bls.nsteps(), 0);
 }
