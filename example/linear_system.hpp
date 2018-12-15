@@ -139,11 +139,9 @@ std::vector<T> LinearSystem<T>::step_sor(T w) {
     for (std::size_t j = i + 1; j < ncols_; ++j)
       lhs_new[i] -= A_[i * nrows_ + j] * lhs_[j];
 
-    lhs_new[i] /= A_[i * nrows_ + i];
+    // SOR
+    lhs_new[i] = lhs_[i] + w * (lhs_new[i] / A_[i * nrows_ + i] - lhs_[i]);
   }
-
-  for (std::size_t i = 0; i < nrows_; ++i)
-    lhs_new[i] = (static_cast<T>(1.0) - w) * lhs_[i] + w * lhs_new[i];
 
   return lhs_new;
 }
