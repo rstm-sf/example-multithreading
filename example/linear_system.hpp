@@ -25,9 +25,15 @@
 
 #include <cmath>
 #include <numeric>
+#include <stdexcept>
 #include <vector>
 
 namespace ex_m_thr {
+
+enum class Method {
+  GaussSeidel,
+  SOR
+};
 
 template <typename T = float>
 class LinearSystem {
@@ -44,11 +50,11 @@ public:
   std::size_t nsteps() const;
   std::vector<T> r_residual_norms() const;
 
-  void solve();
+  void solve(Method method = Method::GaussSeidel);
 
 private:
-  std::vector<T> step_gauss_seidel();
-  std::vector<T> step_sor(T w);
+  std::vector<T> step_solution_gauss_seidel();
+  std::vector<T> step_solution_sor(T w = 0.5);
   bool is_convergence();
 
   const std::size_t max_steps_;
@@ -56,8 +62,8 @@ private:
 
   std::vector<T> r_residual_norms_;
 
-  std::size_t nrows_;
-  std::size_t ncols_;
+  const std::size_t nrows_;
+  const std::size_t ncols_;
 
   std::vector<T> A_;
   std::vector<T> lhs_;
@@ -104,9 +110,14 @@ std::vector<T> LinearSystem<T>::r_residual_norms() const {
 }
 
 template <typename T>
-void LinearSystem<T>::solve() {
+void LinearSystem<T>::solve(Method method) {
   for (std::size_t i = 0; i < max_steps_; ++i) {
-    lhs_ = step_gauss_seidel();
+    switch (method) {
+      case Method::GaussSeidel: lhs_ = step_solution_gauss_seidel(); break;
+      case Method::SOR:         lhs_ = step_solution_sor(); break;
+      default:
+        throw std::runtime_error("LinearSystem::Solve: Undefined method!");
+    }
 
     if (is_convergence())
       break;
@@ -114,7 +125,7 @@ void LinearSystem<T>::solve() {
 }
 
 template <typename T>
-std::vector<T> LinearSystem<T>::step_gauss_seidel() {
+std::vector<T> LinearSystem<T>::step_solution_gauss_seidel() {
   std::vector<T> lhs_new(rhs_);
 
   for (std::size_t i = 0; i < nrows_; ++i) {
@@ -131,7 +142,7 @@ std::vector<T> LinearSystem<T>::step_gauss_seidel() {
 }
 
 template <typename T>
-std::vector<T> LinearSystem<T>::step_sor(T w) {
+std::vector<T> LinearSystem<T>::step_solution_sor(T w) {
   std::vector<T> lhs_new(rhs_);
 
   for (std::size_t i = 0; i < nrows_; ++i) {
