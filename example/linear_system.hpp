@@ -42,18 +42,19 @@ public:
   std::vector<T> solution() const;
 
   std::size_t nsteps() const;
+  std::vector<T> r_residual_norms() const;
 
   void solve();
 
 private:
   std::vector<T> step_gauss_seidel();
   std::vector<T> step_sor(T w);
-  bool is_convergence(std::vector<T>& lhs_new);
+  bool is_convergence();
 
   const std::size_t max_steps_;
   const T accuracy_;
 
-  std::vector<T> step_norms_;
+  std::vector<T> r_residual_norms_;
 
   std::size_t nrows_;
   std::size_t ncols_;
@@ -73,7 +74,7 @@ LinearSystem<T>::LinearSystem()
     A_({4.0,  1.0, -1.0, 2.0,  7.0,  1.0, 1.0, -3.0, 12.0}),
     lhs_(nrows_),
     rhs_({3.0, 19.0, 31.0}) {
-  step_norms_.reserve(max_steps_);
+  r_residual_norms_.reserve(max_steps_);
 };
 
 template <typename T>
@@ -95,18 +96,19 @@ template <typename T>
 std::vector<T> LinearSystem<T>::solution() const { return lhs_; }
 
 template <typename T>
-std::size_t LinearSystem<T>::nsteps() const { step_norms_.size(); }
+std::size_t LinearSystem<T>::nsteps() const { r_residual_norms_.size(); }
+
+template <typename T>
+std::vector<T> LinearSystem<T>::r_residual_norms() const {
+  return r_residual_norms_;
+}
 
 template <typename T>
 void LinearSystem<T>::solve() {
-  std::vector<T> lhs_new;
-
   for (std::size_t i = 0; i < max_steps_; ++i) {
-    lhs_new = step_gauss_seidel();
-    bool is_stop = is_convergence(lhs_new);
-    lhs_ = lhs_new;
+    lhs_ = step_gauss_seidel();
 
-    if (is_stop)
+    if (is_convergence())
       break;
   }
 }
@@ -147,19 +149,24 @@ std::vector<T> LinearSystem<T>::step_sor(T w) {
 }
 
 template <typename T>
-bool LinearSystem<T>::is_convergence(std::vector<T>& lhs_new) {
-  T dd {0.0};
+bool LinearSystem<T>::is_convergence() {
+  T rr {0.0};
+  T xx {0.0};
   for (std::size_t i = 0; i < nrows_; ++i) {
-    T d = lhs_new[i] - lhs_[i];
-    dd += d * d;
+    T residual {0.0};
+    // ncols == nrows
+    for (std::size_t j = 0; j < nrows_; ++j)
+      residual += A_[i * nrows_ + j] * lhs_[j];
+    residual -= rhs_[i];
+
+    rr += residual * residual;
+    xx += lhs_[i] * lhs_[i];
   }
-  T xx = std::inner_product(
-    std::begin(lhs_), std::end(lhs_), std::begin(lhs_), 0.0);
-  T norm = std::sqrt(dd / xx);
 
-  step_norms_.push_back(norm);
+  T r_residual_norm = std::sqrt(rr / xx);
+  r_residual_norms_.push_back(r_residual_norm);
 
-  return norm <= accuracy_;
+  return r_residual_norm <= accuracy_;
 }
 
 } // namespace ex_m_thr
