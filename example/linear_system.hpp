@@ -24,6 +24,7 @@
 #define EXAMPLE_LINEAR_SYSTEM_H_
 
 #include <cmath>
+#include <initializer_list>
 #include <numeric>
 #include <stdexcept>
 #include <vector>
@@ -39,20 +40,27 @@ template <typename T = float>
 class LinearSystem {
 public:
   LinearSystem<T>();
-  ~LinearSystem<T>();
+  virtual ~LinearSystem<T>();
   LinearSystem<T>(const LinearSystem<T>&);
   LinearSystem<T>(LinearSystem<T>&&);
   LinearSystem<T>& operator=(const LinearSystem<T>&);
   LinearSystem<T>& operator=(LinearSystem<T>&&);
+
+  LinearSystem<T>(
+    std::size_t max_steps,
+    T accuracy,
+    std::size_t nrows,
+    std::initializer_list<T> A,
+    std::initializer_list<T> rhs);
 
   std::vector<T> solution() const;
 
   std::size_t nsteps() const;
   std::vector<T> r_residual_norms() const;
 
-  void solve(Method method = Method::GaussSeidel);
+  virtual void solve(Method method = Method::GaussSeidel);
 
-private:
+protected:
   std::vector<T> step_solution_gauss_seidel();
   std::vector<T> step_solution_sor(T w = 0.5);
   bool is_convergence();
@@ -80,6 +88,23 @@ LinearSystem<T>::LinearSystem()
     A_({4.0,  1.0, -1.0, 2.0,  7.0,  1.0, 1.0, -3.0, 12.0}),
     lhs_(nrows_),
     rhs_({3.0, 19.0, 31.0}) {
+  r_residual_norms_.reserve(max_steps_);
+};
+
+template <typename T>
+LinearSystem<T>::LinearSystem(
+    std::size_t max_steps,
+    T accuracy,
+    std::size_t nrows,
+    std::initializer_list<T> A,
+    std::initializer_list<T> rhs)
+  : max_steps_(max_steps),
+    accuracy_(accuracy),
+    nrows_(nrows),
+    ncols_(nrows),
+    A_(A_),
+    lhs_(nrows),
+    rhs_(rhs) {
   r_residual_norms_.reserve(max_steps_);
 };
 
