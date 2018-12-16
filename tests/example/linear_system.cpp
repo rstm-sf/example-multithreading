@@ -21,10 +21,12 @@
 // SOFTWARE.
 
 #include <cmath>
+#include <thread>
 
 #include <gtest/gtest.h>
 
 #include "linear_system.hpp"
+#include "utils.hpp"
 
 class LinearSystemTests : public ::testing::Test {};
 
@@ -43,7 +45,7 @@ TEST_F(LinearSystemTests, test_default) {
   EXPECT_TRUE(std::sqrt(dd) < 1.0e-6);
 }
 
-TEST_F(LinearSystemTests, ex) {
+TEST_F(LinearSystemTests, ex_1) {
   std::size_t max_steps{100};
   float accuracy {1.0e-6};
   std::size_t nrows {4};
@@ -62,8 +64,35 @@ TEST_F(LinearSystemTests, ex) {
   ls.solve();
 
   float dd {0.0};
+  std::vector<float> solution(ls.solution());
   for (std::size_t i = 0; i < exact_solution.size(); ++i) {
-    float d = ls.solution()[i] - exact_solution[i];
+    float d = solution[i] - exact_solution[i];
+    dd += d * d;
+  }
+
+  EXPECT_TRUE(std::sqrt(dd) < 1.0e-5);
+}
+
+TEST_F(LinearSystemTests, ex_2) {
+  std::size_t max_steps{100};
+  float accuracy {1.0e-6};
+  std::size_t nrows {1UL << 10};
+  std::size_t nthrs = std::thread::hardware_concurrency();
+  if(nthrs == 0) nthrs = 2;
+
+  std::vector<float> A(
+    ex_m_thr::generate_square_block_matrix(nrows, nthrs));
+  std::vector<float> lhs(nrows, 1.0f);
+  std::vector<float> rhs(ex_m_thr::mat_vec(A, lhs));
+
+  ex_m_thr::LinearSystem ls(max_steps, accuracy, nrows, A, rhs);
+
+  ls.solve();
+
+  float dd {0.0};
+  std::vector<float> solution(ls.solution());
+  for (std::size_t i = 0; i < nrows; ++i) {
+    float d = solution[i] - lhs[i];
     dd += d * d;
   }
 

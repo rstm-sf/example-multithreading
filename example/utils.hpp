@@ -23,6 +23,7 @@
 #ifndef EXAMPLE_UTILS_H_
 #define EXAMPLE_UTILS_H_
 
+#include <stdexcept>
 #include <vector>
 
 namespace ex_m_thr {
@@ -55,6 +56,23 @@ std::vector<T> generate_square_block_matrix(
   }
 
   return mat;
+}
+
+template <typename T = float>
+std::vector<T> mat_vec(const std::vector<T> mat, const std::vector<T> vec) {
+  const std::size_t nrows = vec.size();
+  if (mat.size() != nrows * nrows)
+    throw std::runtime_error("matvec: mat.size() != nrows * nrows!");
+
+  std::vector<T> result;
+  result.reserve(nrows);
+  for(std::size_t i = 0; i < nrows; ++i) {
+    T r {0.0};
+    for (std::size_t j = 0; j < nrows; ++j)
+      r += mat[i * nrows + j] * vec[j];
+    result.push_back(r);
+  }
+  return result;
 }
 
 } // namespace ex_m_thr
