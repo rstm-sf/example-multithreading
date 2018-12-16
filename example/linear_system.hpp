@@ -49,6 +49,13 @@ public:
     std::size_t max_steps,
     T accuracy,
     std::size_t nrows,
+    const std::vector<T>& A,
+    const std::vector<T>& rhs);
+
+  LinearSystem<T>(
+    std::size_t max_steps,
+    T accuracy,
+    std::size_t nrows,
     std::initializer_list<T> A,
     std::initializer_list<T> rhs);
 
@@ -95,13 +102,30 @@ LinearSystem<T>::LinearSystem(
     std::size_t max_steps,
     T accuracy,
     std::size_t nrows,
+    const std::vector<T>& A,
+    const std::vector<T>& rhs)
+  : max_steps_(max_steps),
+    accuracy_(accuracy),
+    nrows_(nrows),
+    ncols_(nrows),
+    A_(A),
+    lhs_(nrows),
+    rhs_(rhs) {
+  r_residual_norms_.reserve(max_steps_);
+};
+
+template <typename T>
+LinearSystem<T>::LinearSystem(
+    std::size_t max_steps,
+    T accuracy,
+    std::size_t nrows,
     std::initializer_list<T> A,
     std::initializer_list<T> rhs)
   : max_steps_(max_steps),
     accuracy_(accuracy),
     nrows_(nrows),
     ncols_(nrows),
-    A_(A_),
+    A_(A),
     lhs_(nrows),
     rhs_(rhs) {
   r_residual_norms_.reserve(max_steps_);
