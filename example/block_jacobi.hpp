@@ -39,7 +39,9 @@ public:
 
   BlockJacobi<T>(std::size_t nbs, std::size_t nrows, const std::vector<T>& A);
 
-  std::vector<T> times(const std::vector<T>& rhs);
+  std::vector<T> step_solution_gauss_seidel(
+    const std::vector<T>& lhs, const std::vector<T>& rhs) const;
+  std::vector<T> times(const std::vector<T>& rhs) const;
 
 private:
   const std::size_t nrows_;
@@ -92,7 +94,31 @@ BlockJacobi<T>::BlockJacobi(
 }
 
 template <typename T>
-std::vector<T> BlockJacobi<T>::times(const std::vector<T>& rhs) {
+std::vector<T> BlockJacobi<T>::step_solution_gauss_seidel(
+    const std::vector<T>& lhs,
+    const std::vector<T>& rhs) const {
+  std::vector<T> lhs_new(rhs);
+
+  for (std::size_t k = 0; k < nblocks_; ++k) {
+    const std::size_t at = offsets_[k];
+    const std::size_t to = offsets_[k + 1];
+
+    for (std::size_t i = at; i < to; ++i) {
+      for (std::size_t j = at; j < i; ++j)
+        lhs_new[i] -= A_[i * nrows_ + j] * lhs_new[j];
+
+      for (std::size_t j = i + 1; j < to; ++j)
+        lhs_new[i] -= A_[i * nrows_ + j] * lhs[j];
+
+      lhs_new[i] /= A_[i * nrows_ + i];
+    }
+  }
+
+  return lhs_new;
+}
+
+template <typename T>
+std::vector<T> BlockJacobi<T>::times(const std::vector<T>& rhs) const {
   std::vector<T> result;
   result.reserve(rhs.size());
   for (std::size_t k = 0; k < nblocks_; ++k) {

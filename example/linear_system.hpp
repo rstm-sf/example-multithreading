@@ -64,12 +64,12 @@ public:
   std::size_t nsteps() const;
   std::vector<T> r_residual_norms() const;
 
-  virtual void solve(Method method = Method::GaussSeidel);
+  void solve(Method method = Method::GaussSeidel);
 
 protected:
-  std::vector<T> step_solution_gauss_seidel();
-  std::vector<T> step_solution_sor(T w = 0.5);
-  bool is_convergence();
+  virtual std::vector<T> step_solution_gauss_seidel();
+  virtual std::vector<T> step_solution_sor(T w = 0.5);
+  bool is_convergence(const std::vector<T>& lhs_new);
 
   const std::size_t max_steps_;
   const T accuracy_;
@@ -159,17 +159,22 @@ std::vector<T> LinearSystem<T>::r_residual_norms() const {
 
 template <typename T>
 void LinearSystem<T>::solve(Method method) {
+  std::vector<T> lhs_new;
   for (std::size_t i = 0; i < max_steps_; ++i) {
     switch (method) {
-      case Method::GaussSeidel: lhs_ = step_solution_gauss_seidel(); break;
-      case Method::SOR:         lhs_ = step_solution_sor(); break;
+      case Method::GaussSeidel: lhs_new = step_solution_gauss_seidel(); break;
+      case Method::SOR:         lhs_new = step_solution_sor(); break;
       default:
-        throw std::runtime_error("LinearSystem::Solve: Undefined method!");
+        throw std::runtime_error("Solve: undefined method!");
     }
-
-    if (is_convergence())
+    bool is_stop = is_convergence(lhs_new);
+    lhs_ = lhs_new;
+    if (is_stop)
       break;
   }
+
+  if (r_residual_norms_.size() == max_steps_)
+    std::cerr << "Warning! Solve: steps == max_steps_" << std::endl;
 }
 
 template <typename T>
@@ -208,21 +213,16 @@ std::vector<T> LinearSystem<T>::step_solution_sor(T w) {
 }
 
 template <typename T>
-bool LinearSystem<T>::is_convergence() {
-  T rr {0.0};
+bool LinearSystem<T>::is_convergence(const std::vector<T>& lhs_new) {
+  T dd {0.0};
   T xx {0.0};
   for (std::size_t i = 0; i < nrows_; ++i) {
-    T residual {0.0};
-    // ncols == nrows
-    for (std::size_t j = 0; j < nrows_; ++j)
-      residual += A_[i * nrows_ + j] * lhs_[j];
-    residual -= rhs_[i];
-
-    rr += residual * residual;
-    xx += lhs_[i] * lhs_[i];
+    T d = lhs_new[i] - lhs_[i];
+    dd += d * d;
+    xx += lhs_new[i] * lhs_new[i];
   }
 
-  T r_residual_norm = std::sqrt(rr / xx);
+  T r_residual_norm = std::sqrt(dd / xx);
   r_residual_norms_.push_back(r_residual_norm);
 
   return r_residual_norm <= accuracy_;

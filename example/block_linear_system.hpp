@@ -28,6 +28,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "block_jacobi.hpp"
 #include "linear_system.hpp"
 
 namespace ex_m_thr {
@@ -43,17 +44,30 @@ public:
   BlockLinearSystem<T>& operator=(BlockLinearSystem<T>&&);
 
   BlockLinearSystem<T>(
+    std::size_t nblocks,
+    std::size_t max_steps,
+    T accuracy,
+    std::size_t nrows,
+    const std::vector<T>& A,
+    const std::vector<T>& rhs);
+
+  BlockLinearSystem<T>(
+    std::size_t nblocks,
     std::size_t max_steps,
     T accuracy,
     std::size_t nrows,
     std::initializer_list<T> A,
     std::initializer_list<T> rhs);
 
-  virtual void solve(Method method = Method::GaussSeidel) override;
+private:
+  virtual std::vector<T> step_solution_gauss_seidel() override;
+
+  BlockJacobi<T> preconditioner_;
 };
 
 template <typename T>
-BlockLinearSystem<T>::BlockLinearSystem() : LinearSystem<T>() {};
+BlockLinearSystem<T>::BlockLinearSystem()
+  : LinearSystem<T>(), preconditioner_(2, this->nrows_, this->A_) {};
 
 template <typename T>
 BlockLinearSystem<T>::~BlockLinearSystem() = default;
@@ -72,15 +86,30 @@ BlockLinearSystem<T>& BlockLinearSystem<T>::operator=(BlockLinearSystem<T>&&) = 
 
 template <typename T>
 BlockLinearSystem<T>::BlockLinearSystem(
+    std::size_t nblocks,
+    std::size_t max_steps,
+    T accuracy,
+    std::size_t nrows,
+    const std::vector<T>& A,
+    const std::vector<T>& rhs)
+  : LinearSystem<T>(max_steps, accuracy, nrows, A, rhs),
+    preconditioner_(nblocks, this->nrows_, this->A_) {};
+
+template <typename T>
+BlockLinearSystem<T>::BlockLinearSystem(
+    std::size_t nblocks,
     std::size_t max_steps,
     T accuracy,
     std::size_t nrows,
     std::initializer_list<T> A,
     std::initializer_list<T> rhs)
-  : LinearSystem<T>(max_steps, accuracy, nrows, A, rhs) {};
+  : LinearSystem<T>(max_steps, accuracy, nrows, A, rhs),
+    preconditioner_(nblocks, this->nrows_, this->A_) {};
 
 template <typename T>
-void BlockLinearSystem<T>::solve(Method method) {}
+std::vector<T> BlockLinearSystem<T>::step_solution_gauss_seidel() {
+  return preconditioner_.step_solution_gauss_seidel(this->lhs_, this->rhs_);
+}
 
 } // namespace ex_m_thr
 
