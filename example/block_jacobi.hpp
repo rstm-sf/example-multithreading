@@ -23,6 +23,7 @@
 #ifndef EXAMPLE_BLOCK_JACOBI_H_
 #define EXAMPLE_BLOCK_JACOBI_H_
 
+#include <thread>
 #include <vector>
 
 namespace ex_m_thr {
@@ -40,10 +41,16 @@ public:
   BlockJacobi<T>(std::size_t nbs, std::size_t nrows, const std::vector<T>& A);
 
   std::vector<T> step_solution_gauss_seidel(
-    const std::vector<T>& lhs, const std::vector<T>& rhs) const;
+    const std::vector<T>& lhs, const std::vector<T>& rhs);
   std::vector<T> times(const std::vector<T>& rhs) const;
 
 private:
+  void step_solution_gauss_seidel_thr(
+    const std::vector<T>& lhs,
+    const std::vector<T>& rhs,
+    std::vector<T>& lhs_new,
+    std::uint32_t thr_id);
+
   const std::size_t nrows_;
   std::vector<T> A_;
 
@@ -87,32 +94,24 @@ BlockJacobi<T>::BlockJacobi(
     start += offset;
     offsets_.push_back(start);
   }
-
-  //std::size_t size =
-  //  balance * (offsets_ + 1) * (offsets_ + 1) +
-  //  (nblocks_ - balance) * offsets_ * offsets_;
 }
 
 template <typename T>
 std::vector<T> BlockJacobi<T>::step_solution_gauss_seidel(
     const std::vector<T>& lhs,
-    const std::vector<T>& rhs) const {
+    const std::vector<T>& rhs) {
   std::vector<T> lhs_new(rhs);
 
+  std::vector<std::thread> threads;
   for (std::size_t k = 0; k < nblocks_; ++k) {
-    const std::size_t at = offsets_[k];
-    const std::size_t to = offsets_[k + 1];
-
-    for (std::size_t i = at; i < to; ++i) {
-      for (std::size_t j = at; j < i; ++j)
-        lhs_new[i] -= A_[i * nrows_ + j] * lhs_new[j];
-
-      for (std::size_t j = i + 1; j < to; ++j)
-        lhs_new[i] -= A_[i * nrows_ + j] * lhs[j];
-
-      lhs_new[i] /= A_[i * nrows_ + i];
-    }
+    std::thread thr([&lhs, &rhs, &lhs_new, k, this] {
+      step_solution_gauss_seidel_thr(lhs, rhs, lhs_new, k);
+    }); 
+    threads.emplace_back(std::move(thr));
   }
+
+  for(auto& thr : threads)
+    thr.join();
 
   return lhs_new;
 }
@@ -134,6 +133,26 @@ std::vector<T> BlockJacobi<T>::times(const std::vector<T>& rhs) const {
   }
 
   return result;
+}
+
+template <typename T>
+void BlockJacobi<T>::step_solution_gauss_seidel_thr(
+    const std::vector<T>& lhs,
+    const std::vector<T>& rhs,
+    std::vector<T>& lhs_new,
+    std::uint32_t thr_id) {
+  const std::size_t at = offsets_[thr_id];
+  const std::size_t to = offsets_[thr_id + 1];
+
+  for (std::size_t i = at; i < to; ++i) {
+    for (std::size_t j = at; j < i; ++j)
+      lhs_new[i] -= A_[i * nrows_ + j] * lhs_new[j];
+
+    for (std::size_t j = i + 1; j < to; ++j)
+      lhs_new[i] -= A_[i * nrows_ + j] * lhs[j];
+
+    lhs_new[i] /= A_[i * nrows_ + i];
+  }
 }
 
 } // namespace ex_m_thr
